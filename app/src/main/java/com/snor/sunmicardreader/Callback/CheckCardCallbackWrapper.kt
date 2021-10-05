@@ -1,4 +1,4 @@
-package com.snor.sunmicardreader
+package com.snor.sunmicardreader.Callback
 
 import android.os.Bundle
 import android.os.RemoteException
