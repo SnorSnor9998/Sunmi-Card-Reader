@@ -2,163 +2,85 @@ package com.snor.sunmicardreader.util;
 
 import android.text.TextUtils;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 
-public final class TLVUtil {
 
-    private TLVUtil() {
-        throw new AssertionError("Create instance of TLVUtil is prohibited");
-    }
+public class TLVUtil {
 
-    /**
-     * 将16进制字符串转换为TLV对象列表
-     *
-     * @param hexStr Hex格式的TLV数据
-     * @return TLV数据List
-     */
-    public static List<TLV> buildTLVList(String hexStr) {
-        List<TLV> list = new ArrayList<>();
+
+    public static Map<String, TLV> hexStrToTLVMap(String hexStr) {
+        hexStr = hexStr.toUpperCase();
+        Map<String, TLV> map = new HashMap<>();
         int position = 0;
-
-        while (position != hexStr.length()) {
-            Tuple<String, Integer> tupleTag = getTag(hexStr, position);
-            if (TextUtils.isEmpty(tupleTag.a) || "00".equals(tupleTag.a)) {
-                break;
-            }
-            Tuple<Integer, Integer> tupleLen = getLength(hexStr, tupleTag.b);
-            Tuple<String, Integer> tupleValue = getValue(hexStr, tupleLen.b, tupleLen.a);
-//            Log.e("TLV-buildTLVList", tupleTag.a + ":" + tupleValue.a);
-            list.add(new TLV(tupleTag.a, tupleLen.a, tupleValue.a));
-            position = tupleValue.b;
-        }
-        return list;
-    }
-
-    /**
-     * 将16进制字符串转换为TLV对象MAP<br/>
-     * TLV文档连接参照：http://wenku.baidu.com/view/b31b26a13186bceb18e8bb53.html?re=view&qq-pf-to=pcqq.c2c
-     *
-     * @param hexStr Hex格式TLV数据
-     * @return TLV数据Map
-     */
-    public static Map<String, TLV> buildTLVMap(String hexStr) {
-        Map<String, TLV> map = new LinkedHashMap<>();
-        if (TextUtils.isEmpty(hexStr) || hexStr.length() % 2 != 0) return map;
-        int position = 0;
-        while (position < hexStr.length()) {
-            Tuple<String, Integer> tupleTag = getTag(hexStr, position);
-            if (TextUtils.isEmpty(tupleTag.a) || "00".equals(tupleTag.a)) {
-                break;
-            }
-            Tuple<Integer, Integer> tupleLen = getLength(hexStr, tupleTag.b);
-            Tuple<String, Integer> tupleValue = getValue(hexStr, tupleLen.b, tupleLen.a);
-//            Log.e("TLV-buildTLVMap", tupleTag.a + ":" + tupleValue.a);
-            map.put(tupleTag.a, new TLV(tupleTag.a, tupleLen.a, tupleValue.a));
-            position = tupleValue.b;
-        }
-        return map;
-    }
-
-    /**
-     * 将字节数组转换为TLV对象列表
-     *
-     * @param hexByte byte数据格式的TLV数据
-     * @return TLV数据List
-     */
-    public static List<TLV> buildTLVList(byte[] hexByte) {
-        String hexString = ByteUtil.bytes2HexStr(hexByte);
-        return buildTLVList(hexString);
-    }
-
-    /**
-     * 将字节数组转换为TLV对象MAP
-     *
-     * @param hexByte byte数据格式的TLV数据
-     * @return TLV数据Map
-     */
-    public static Map<String, TLV> buildTLVMap(byte[] hexByte) {
-        String hexString = ByteUtil.bytes2HexStr(hexByte);
-        return buildTLVMap(hexString);
-    }
-
-    /**
-     * 获取Tag及更新后的游标位置
-     */
-    private static Tuple<String, Integer> getTag(String hexString, int position) {
-        String tag = "";
-        try {
-            String byte1 = hexString.substring(position, position + 2);
-            String byte2 = hexString.substring(position + 2, position + 4);
-            int b1 = Integer.parseInt(byte1, 16);
-            int b2 = Integer.parseInt(byte2, 16);
-            // b5~b1如果全为1，则说明这个tag下面还有一个子字节，PBOC/EMV里的tag最多占两个字节
-            if ((b1 & 0x1F) == 0x1F) {
-                // 除tag标签首字节外，tag中其他字节最高位为：1-表示后续还有字节；0-表示为最后一个字节。
-                if ((b2 & 0x80) == 0x80) {
-                    tag = hexString.substring(position, position + 6);// 3Bytes的tag
+        while (hexStr.length() > position) {
+            // get tag  取得子域Tag标, Tag标签不仅包含1个字节, 2个字节, 还包含3个字节。
+            String tag;
+            String tagStr = hexStr.substring(position, position + 2);
+            int tagInt = Integer.parseInt(tagStr, 16);
+            String secondStr = hexStr.substring(position + 2, position + 4);
+            int j = Integer.parseInt(secondStr, 16);
+            // b5~b1如果全为1, 则说明这个tag下面还有一个子字节, EMV里的tag最多占两个字节
+            int temp = tagInt & 0x1F;
+            if (temp == 0x1F) {
+                temp = j & 0x80;
+                if (temp == 0x80) { // 除Tag标签首字节外，tag中其他字节最高位为：1-表示后续还有字节；0-表示为最后一个字节。
+                    tag = hexStr.substring(position, position + 6); // 3Bytes的tag
                 } else {
-                    tag = hexString.substring(position, position + 4);// 2Bytes的tag
+                    tag = hexStr.substring(position, position + 4); // 2Bytes的tag
                 }
             } else {
-                tag = hexString.substring(position, position + 2);// 1Bytes的tag
+                tag = hexStr.substring(position, position + 2);
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return TupleUtil.tuple(tag.toUpperCase(), position + tag.length());
-    }
+            boolean b = TextUtils.isEmpty(tag) || TextUtils.equals("00", tag);
+            if (b) break;
+            position += tag.length();
 
-    /**
-     * 获取Length及游标更新后的游标位置
-     */
-    private static Tuple<Integer, Integer> getLength(final String hexStr, final int position) {
-        int index = position;
-        String hexLen = hexStr.substring(index, index + 2);
-        index += 2;
-        int byte1 = Integer.parseInt(hexLen, 16);
-        // Length域的编码比较简单,最多有四个字节,
-        // 如果第一个字节的最高位b8为0, b7~b1的值就是value域的长度.
-        // 如果b8为1, b7~b1的值指示了下面有几个子字节. 下面子字节的值就是value域的长度.
-        if ((byte1 & 0x80) != 0) {// 最左侧的bit位为1
-            int subLen = byte1 & 0x7F;
-            hexLen = hexStr.substring(index, index + subLen * 2);
-            index += subLen * 2;
-        }
-        return TupleUtil.tuple(Integer.parseInt(hexLen, 16), index);
-    }
+            // get length
+            String lengthStr = hexStr.substring(position, position + 2);
+            int lengthInt = Integer.parseInt(lengthStr, 16);
+            // Length域的编码比较简单 , 最多有四个字节 , 如果第一个字节的最高位b8为0 , b7~b1的值就是value域的长度 , 如果b8为1, b7~b1的值指示了下面有几个子字节 , 下面子字节的值就是value域的长度
+            temp = (lengthInt >> 7) & 1;
+            if (temp == 0) {
+                position = position + 2;
+            } else {
+                // 当最左侧的bit位为1的时候 取得后7bit的值
+                int var = lengthInt & 127; // 127的二进制 0111 1111
+                position = position + 2;
+                lengthStr = hexStr.substring(position, position + var * 2);
+                // position表示第一个字节，后面的表示有多少个字节来表示后面的Value值
+                position = position + var * 2;
+            }
+            int length = Integer.parseInt(lengthStr, 16);
 
-    /**
-     * 获取Value及游标更新后的游标位置
-     */
-    private static Tuple<String, Integer> getValue(final String hexStr, final int position, final int len) {
-        String value = "";
-        try {
-            value = hexStr.substring(position, position + len * 2);
-        } catch (Exception e) {
-            e.printStackTrace();
+            // get value
+            String value = hexStr.substring(position, position + length * 2);
+            position = position + value.length();
+
+
+            TLV tlv = new TLV(tag, length, value);
+            map.put(tag, tlv);
         }
-        return TupleUtil.tuple(value.toUpperCase(), position + len * 2);
+        return map;
     }
 
     /***
      * 将TLV转换成16进制字符串
      */
-    public static String revertToHexStr(TLV tlv) {
+    public static String recoverToHexStr(TLV tlv) {
         StringBuilder sb = new StringBuilder();
-        sb.append(tlv.getTag());
-        sb.append(TLVValueLengthToHexString(tlv.getLength()));
-        sb.append(tlv.getValue());
+        String length = TLVValueLengthToHexString(tlv.length);
+        sb.append(tlv.tag);
+        sb.append(length);
+        sb.append(tlv.value);
         return sb.toString();
     }
 
     /**
      * 将TLV数据反转成字节数组
      */
-    public static byte[] revertToBytes(TLV tlv) {
-        String hex = revertToHexStr(tlv);
+    public static byte[] recoverToBytes(TLV tlv) {
+        String hex = recoverToHexStr(tlv);
         return ByteUtil.hexStr2Bytes(hex);
     }
 

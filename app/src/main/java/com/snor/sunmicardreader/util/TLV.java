@@ -1,21 +1,21 @@
 package com.snor.sunmicardreader.util;
 
-public final class TLV {
+public class TLV {
 
-    private final String tag;
-    private final int length;
-    private final String value;
+    public String tag;
+    public int length;
+    public String value;
 
     public TLV(String tag, String value) {
-        this.tag = null2UpperCaseString(tag);
-        this.value = null2UpperCaseString(value);
+        this.tag = tag;
+        this.value = value;
         this.length = ByteUtil.hexStr2Bytes(value).length;
     }
 
     public TLV(String tag, int length, String value) {
-        this.tag = null2UpperCaseString(tag);
         this.length = length;
-        this.value = null2UpperCaseString(value);
+        this.tag = tag;
+        this.value = value;
     }
 
     public String getTag() {
@@ -30,22 +30,30 @@ public final class TLV {
         return value;
     }
 
+    public void setTag(String tag) {
+        this.tag = tag;
+    }
+
+    public void setLength(int length) {
+        this.length = length;
+    }
+
+    public void setValue(String value) {
+        this.value = value;
+    }
+
+    /***
+     * 将TLV恢复成字符串
+     */
     public String recoverToHexStr() {
-        return TLVUtil.revertToHexStr(this);
+        return TLVUtil.recoverToHexStr(this);
     }
 
+    /***
+     * 将TLV恢复成字节数组
+     */
     public byte[] recoverToBytes() {
-        return TLVUtil.revertToBytes(this);
+        return TLVUtil.recoverToBytes(this);
     }
-
-    @Override
-    public String toString() {
-        return "tag=[" + tag + "]," + "length=[" + length + "]," + "value=[" + value + "]";
-    }
-
-    private String null2UpperCaseString(String src) {
-        return src == null ? "" : src.toUpperCase();
-    }
-
 
 }

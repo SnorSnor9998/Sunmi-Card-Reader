@@ -1,5 +1,6 @@
 package com.snor.sunmicardreader
 
+import EmvUtil
 import android.annotation.SuppressLint
 import android.os.*
 import android.util.Log
@@ -15,7 +16,10 @@ import com.snor.sunmicardreader.util.ByteUtil
 import com.snor.sunmicardreader.util.TLV
 import com.snor.sunmicardreader.util.TLVUtil
 import com.sunmi.pay.hardware.aidl.AidlConstants
+import com.sunmi.pay.hardware.aidl.AidlConstants.EMV.TLVOpCode
 import com.sunmi.pay.hardware.aidl.AidlErrorCode
+import com.sunmi.pay.hardware.aidlv2.AidlConstantsV2
+import com.sunmi.pay.hardware.aidlv2.bean.EMVCandidateV2
 import com.sunmi.pay.hardware.aidlv2.bean.EMVTransDataV2
 import com.sunmi.pay.hardware.aidlv2.bean.PinPadConfigV2
 import com.sunmi.pay.hardware.aidlv2.emv.EMVOptV2
@@ -26,7 +30,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import sunmi.paylib.SunmiPayKernel
 import java.util.*
 
 
@@ -34,10 +37,10 @@ class MainActivity : AppCompatActivity() {
 
     private val binding : ActivityMainBinding by viewBinding()
 
-    private var mSMPayKernel: SunmiPayKernel? = null
-    private var mReadCardOptV2: ReadCardOptV2? = null
-    private var mEMVOptV2: EMVOptV2? = null
-    private var mPinPadOptV2: PinPadOptV2? = null
+//    private var mSMPayKernel: SunmiPayKernel? = null
+    private var mReadCardOptV2: ReadCardOptV2 = BaseApp.mReadCardOptV2!!
+    private var mEMVOptV2: EMVOptV2 = BaseApp.mEMVOptV2!!
+    private var mPinPadOptV2: PinPadOptV2 = BaseApp.mPinPadOptV2!!
 
     //FOR UI
     private val cardType = MutableLiveData<String>()
@@ -46,27 +49,16 @@ class MainActivity : AppCompatActivity() {
     private var mCardNo: String = ""
     private var mCardType = 0
     private var mPinType: Int? = null
+    private var mCertInfo: String = ""
 
     override fun onStart() {
         super.onStart()
 
-        mSMPayKernel = SunmiPayKernel.getInstance()
-        mSMPayKernel!!.initPaySDK(applicationContext, object : SunmiPayKernel.ConnectCallback {
-            override fun onDisconnectPaySDK() {}
-            override fun onConnectPaySDK() {
-                try {
-                    mReadCardOptV2 = mSMPayKernel!!.mReadCardOptV2
-                    mEMVOptV2 = mSMPayKernel!!.mEMVOptV2
-                    mPinPadOptV2 = mSMPayKernel!!.mPinPadOptV2
-                    Log.e("dd--", "SDK INIT SUCCESSFUL")
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
-        })
+        EmvUtil().initKey()
+        EmvUtil().initAidAndRid()
+        EmvUtil().setTerminalParam()
 
     }
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -96,19 +88,21 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.btnAll.setOnClickListener {
-            val cardType: Int = AidlConstants.CardType.MAGNETIC.value or AidlConstants.CardType.NFC.value or
-                    AidlConstants.CardType.IC.value
+            val cardType: Int =
+                AidlConstants.CardType.MAGNETIC.value or AidlConstants.CardType.NFC.value or
+                        AidlConstants.CardType.IC.value
             checkCard(cardType)
         }
+
 
     }
 
     private fun checkCard(cardType: Int) {
         try {
-            mEMVOptV2!!.abortTransactProcess()
-            mEMVOptV2!!.initEmvProcess()
+            mEMVOptV2.abortTransactProcess()
+            mEMVOptV2.initEmvProcess()
 
-            mReadCardOptV2!!.checkCard(cardType, mCheckCardCallback, 60)
+            mReadCardOptV2.checkCard(cardType, mCheckCardCallback, 60)
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -123,13 +117,12 @@ class MainActivity : AppCompatActivity() {
                 withContext(Dispatchers.Main) {
                     cardType.value = "Type: IC"
                     result.value = "Result: $atr"
-                    println(cardType.value)
-                    println(result.value)
+                    Log.e("dd--", "Type:IC")
+                    Log.e("dd--", "ID: $atr")
+
 
                     mCardType = AidlConstants.CardType.IC.value
                     transactProcess()
-
-                    cancelCheckCard()
 
                 }
             }
@@ -148,11 +141,12 @@ class MainActivity : AppCompatActivity() {
                     cardType.value = "Type: Magnetic"
                     result.value =
                         "Result:\n Track 1: $track1 \nTrack 2: $track2 \nTrack 3: $track3 \n"
-                    println(cardType.value)
-                    println(result.value)
 
-                    mCardType = AidlConstants.CardType.MAGNETIC.getValue()
-                    cancelCheckCard()
+                    Log.e("dd--", "Type:Magnetic")
+                    Log.e("dd--", "ID: ${result.value}")
+
+
+                    mCardType = AidlConstants.CardType.MAGNETIC.value
                 }
             }
         }
@@ -165,13 +159,11 @@ class MainActivity : AppCompatActivity() {
                 withContext(Dispatchers.Main){
                     cardType.value = "Type: NFC"
                     result.value = "Result:\n UUID: $uuid"
-                    println(cardType.value)
-                    println(result.value)
+                    Log.e("dd--", "Type:NFC")
+                    Log.e("dd--", "ID: $uuid")
 
-                    mCardType = AidlConstants.CardType.NFC.getValue()
+                    mCardType = AidlConstants.CardType.NFC.value
                     transactProcess()
-
-                    cancelCheckCard()
 
                 }
             }
@@ -186,7 +178,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun cancelCheckCard() {
         try {
-            mReadCardOptV2!!.cancelCheckCard()
+            mReadCardOptV2.cancelCheckCard()
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -199,13 +191,29 @@ class MainActivity : AppCompatActivity() {
             emvTransData.amount = "10"
             emvTransData.flowType = 1
             emvTransData.cardType = mCardType
-            mEMVOptV2!!.transactProcess(emvTransData, mEMVListener)
+            mEMVOptV2.transactProcess(emvTransData, mEMVListener)
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
     private val mEMVListener = object : EMVCallback(){
+
+        override fun onWaitAppSelect(p0: MutableList<EMVCandidateV2>?, p1: Boolean) {
+            super.onWaitAppSelect(p0, p1)
+
+            Log.e("dd--", "onWaitAppSelect isFirstSelect:$p1")
+
+            //Debit Card might have 2 AID
+            //Priority 1 should be 'Debit <MS/VISA>'
+            //Priority 2 should be 'ATM'
+            p0?.forEach {
+                Log.e("dd--", "EMVCandidate:$it")
+            }
+            //default take 1 priority
+            mEMVOptV2.importAppSelect(0)
+
+        }
 
         override fun onAppFinalSelect(p0: String?) {
             super.onAppFinalSelect(p0)
@@ -215,7 +223,7 @@ class MainActivity : AppCompatActivity() {
             // set normal tlv data
             val tags = arrayOf("5F2A", "5F36")
             val value = arrayOf("0643", "00")
-            mEMVOptV2!!.setTlvList(AidlConstants.EMV.TLVOpCode.OP_NORMAL, tags,value)
+            mEMVOptV2.setTlvList(AidlConstants.EMV.TLVOpCode.OP_NORMAL, tags,value)
 
 
             if (p0 != null && p0.isNotEmpty()){
@@ -229,7 +237,7 @@ class MainActivity : AppCompatActivity() {
                     val tagsPayWave = arrayOf("DF8124", "DF8125", "DF8126")
                     val valuesPayWave = arrayOf(
                         "999999999999", "999999999999", "000000000000")
-                    mEMVOptV2!!.setTlvList(
+                    mEMVOptV2.setTlvList(
                         AidlConstants.EMV.TLVOpCode.OP_PAYWAVE,
                         tagsPayWave,
                         valuesPayWave
@@ -248,7 +256,7 @@ class MainActivity : AppCompatActivity() {
                         "000000000000", "000000100000", "999999999999", "000000100000",
                         "30", "02", "0000000000", "000000000000", "000000000000"
                     )
-                    mEMVOptV2!!.setTlvList(
+                    mEMVOptV2.setTlvList(
                         AidlConstants.EMV.TLVOpCode.OP_PAYPASS,
                         tagsPayPass,
                         valuesPayPass
@@ -257,14 +265,14 @@ class MainActivity : AppCompatActivity() {
 
 
             }
-            mEMVOptV2!!.importAppFinalSelectStatus(0)
+            mEMVOptV2.importAppFinalSelectStatus(0)
         }
 
         override fun onConfirmCardNo(p0: String?) {
             super.onConfirmCardNo(p0)
             Log.e("dd--", "onConfirmCardNo cardNo:$p0")
             mCardNo = p0!!
-            mEMVOptV2!!.importCardNoStatus(0)
+            mEMVOptV2.importCardNoStatus(0)
         }
 
         override fun onRequestShowPinPad(p0: Int, p1: Int) {
@@ -278,14 +286,28 @@ class MainActivity : AppCompatActivity() {
         override fun onCertVerify(p0: Int, p1: String?) {
             super.onCertVerify(p0, p1)
             Log.e("dd---", "onCertVerify certType:$p0 certInfo:$p1")
+            mCertInfo = p1.toString()
+            mEMVOptV2.importCertStatus(0)
         }
+
+        override fun onOnlineProc() {
+            super.onOnlineProc()
+
+            if(mCardType != AidlConstants.CardType.MAGNETIC.value){
+                getTlvData()
+            }
+
+        }
+
 
 
         override fun onTransResult(p0: Int, p1: String?) {
             super.onTransResult(p0, p1)
+            //Code = 0 (Success)
             Log.e("dd---", "onTransResult code:$p0 desc:$p1")
-            getExpireDateAndCardholderName()
+
         }
+
 
     }
 
@@ -301,23 +323,19 @@ class MainActivity : AppCompatActivity() {
         Log.e("dd---", "initPinPad")
         try {
             val pinPadConfig = PinPadConfigV2()
-            pinPadConfig.pinPadType = 0 //0 show default pin pad , 1 custom
-            pinPadConfig.pinType = mPinType!! //0 online 1 offline
-            pinPadConfig.isOrderNumKey = true
-
-            // ascii格式转换成的byte 例如 “123456”.getBytes("us ascii")
+            pinPadConfig.pinPadType = 0
+            pinPadConfig.pinType = mPinType!!
+            pinPadConfig.isOrderNumKey = false
             val panBytes = mCardNo.substring(mCardNo.length - 13, mCardNo.length - 1)
                 .toByteArray(charset("US-ASCII"))
             pinPadConfig.pan = panBytes
-
-            pinPadConfig.timeout = 15 * 1000 // input password timeout
-            pinPadConfig.pinKeyIndex = 1 // pik index
+            pinPadConfig.timeout = 60 * 1000 // input password timeout
+            pinPadConfig.pinKeyIndex = 12 // pik index
             pinPadConfig.maxInput = 6
             pinPadConfig.minInput = 0
-
             pinPadConfig.keySystem = 0 // 0 - MkSk 1 - DuKpt
             pinPadConfig.algorithmType = 0 // 0 - 3DES 1 - SM4
-            mPinPadOptV2!!.initPinPad(pinPadConfig, mPinPadListener)
+            mPinPadOptV2.initPinPad(pinPadConfig, mPinPadListener)
         } catch (e: java.lang.Exception) {
             e.printStackTrace()
         }
@@ -335,52 +353,124 @@ class MainActivity : AppCompatActivity() {
             if (p1 != null) {
                 val hexStr = ByteUtil.bytes2HexStr(p1)
                 Log.e("dd--", "onConfirm pin block:$hexStr")
+                importPinInputStatus(0)
+            }else{
+                importPinInputStatus(2)
             }
         }
 
         override fun onCancel() {
             super.onCancel()
             Log.e("dd--", "onCancel")
+            importPinInputStatus(1)
         }
 
         override fun onError(p0: Int) {
             super.onError(p0)
             Log.e("dd--", "onError: ${AidlErrorCode.valueOf(p0).msg}")
+            importPinInputStatus(3)
         }
 
     }
 
-
-
-    @Throws(RemoteException::class)
-    private fun getExpireDateAndCardholderName() {
-        val out = ByteArray(64)
-        val tags = arrayOf("5F24", "5F20")
-        val len: Int = mEMVOptV2!!.getTlvList(AidlConstants.EMV.TLVOpCode.OP_NORMAL, tags, out)
-        if (len > 0) {
-            val bytesOut = Arrays.copyOf(out, len)
-            val hexStr = ByteUtil.bytes2HexStr(bytesOut)
-            val map: Map<String, TLV> = TLVUtil.buildTLVMap(hexStr)
-            val tlv5F24: TLV? = map["5F24"] // expire date
-            val tlv5F20: TLV? = map["5F20"] // cardholder name
-            var expireDate = ""
-            var cardholder = ""
-            if (tlv5F24!=null && tlv5F24.value != null) {
-                expireDate = tlv5F24.value
+    private fun importPinInputStatus(inputResult: Int) {
+        Log.e("dd--", "importPinInputStatus:$inputResult")
+        try {
+            val tags = arrayOf("5F2A", "5F36")
+            val out = ByteArray(1024)
+            val len = mEMVOptV2.getTlvList(TLVOpCode.OP_NORMAL, tags, out)
+            if (len < 0) {
+                Log.e("dd--", "getTlvList error,len:$len")
+            } else {
+                val hex = ByteUtil.bytes2HexStr(Arrays.copyOf(out, len))
+                val map: Map<String, TLV> = TLVUtil.hexStrToTLVMap(hex)
+                Log.e("dd--", "getTlvList :$map")
             }
-            if (tlv5F20 != null && tlv5F20.value != null) {
-                val value: String = tlv5F20.value
-                val bytes = ByteUtil.hexStr2Bytes(value)
-                cardholder = String(bytes)
+            mEMVOptV2.importPinInputStatus(mPinType!!, inputResult)
+        } catch (e: java.lang.Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun getTlvData() {
+        try {
+            val tagList = arrayOf(
+                "DF02", "5F34", "9F06", "FF30", "FF31", "95", "9B", "9F36", "9F26",
+                "9F27", "DF31", "5A", "57", "5F24", "9F1A", "9F03", "9F33", "9F10", "9F37", "9C",
+                "9A", "9F02", "5F2A", "82", "9F34", "9F35", "9F1E", "84", "4F", "9F09", "9F41",
+                "9F63", "5F20", "9F12", "50"
+            )
+            val payPassTags = arrayOf(
+                "DF811E",
+                "DF812C",
+                "DF8118",
+                "DF8119",
+                "DF811F",
+                "DF8117",
+                "DF8124",
+                "DF8125",
+                "9F6D",
+                "DF811B",
+                "9F53",
+                "DF810C",
+                "9F1D",
+                "DF8130",
+                "DF812D",
+                "DF811C",
+                "DF811D",
+                "9F7C"
+            )
+            val outData = ByteArray(2048)
+            val map: MutableMap<String, TLV> = HashMap()
+            var len = mEMVOptV2.getTlvList(TLVOpCode.OP_NORMAL, tagList, outData)
+            if (len > 0) {
+                val hexStr = ByteUtil.bytes2HexStr(Arrays.copyOf(outData, len))
+                map.putAll(TLVUtil.hexStrToTLVMap(hexStr))
             }
-            val finalExpireDate = expireDate
-            val month = expireDate.substring(2,4)
-            val year = expireDate.substring(0,2)
-            val finalCardholder = cardholder
+            len = mEMVOptV2.getTlvList(TLVOpCode.OP_PAYPASS, payPassTags, outData)
+            if (len > 0) {
+                val hexStr = ByteUtil.bytes2HexStr(Arrays.copyOf(outData, len))
+                map.putAll(TLVUtil.hexStrToTLVMap(hexStr))
+            }
 
-            Log.e("dd--", "expireDate month:$month year:$year")
-            Log.e("dd--", "cardholder:$cardholder")
+            //https://emvlab.org/emvtags/all/ refer this as TLV data
+            // Eg: 5F24 -> Expire date
+            // Eg: 5F20 -> Card holder
+            var temp = ""
+            val set: Set<String> = map.keys
+            set.forEach {
+                val tlv = map[it]
+                temp += if (tlv != null) {
+                    "$it : ${tlv.value} \n"
+                } else {
+                    "$it : \n"
+                }
+            }
+            Log.e("dd--", "TLV: $temp")
+            importOnlineProcessStatus(0)
 
+        } catch (e: java.lang.Exception) {
+            e.printStackTrace()
+            importOnlineProcessStatus(-1)
+        }
+    }
+
+    private fun importOnlineProcessStatus(status: Int) {
+        Log.e("dd--", "importOnlineProcessStatus status:$status")
+        try {
+            val tags = arrayOf("71", "72", "91", "8A", "89")
+            val values = arrayOf("", "", "", "", "")
+            val out = ByteArray(1024)
+            val len = mEMVOptV2.importOnlineProcStatus(status, tags, values, out)
+            if (len < 0) {
+                Log.e("dd--", "importOnlineProcessStatus error,code:$len")
+            } else {
+                val bytes = out.copyOf(len)
+                val hexStr = ByteUtil.bytes2HexStr(bytes)
+                Log.e("dd--", "importOnlineProcessStatus outData:$hexStr")
+            }
+        } catch (e: java.lang.Exception) {
+            e.printStackTrace()
         }
     }
 
