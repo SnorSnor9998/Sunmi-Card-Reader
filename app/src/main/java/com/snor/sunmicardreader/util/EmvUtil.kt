@@ -26,9 +26,9 @@ class EmvUtil {
                 AidlConstants.Security.KEY_ALG_TYPE_3DES,
                 10
             )
-            Log.e("ddd--", "save KEK result:$result")
+            Log.e("dd--", "save KEK result:$result")
             if (result != 0) {
-                Log.e("ddd--", "save KEK fail")
+                Log.e("dd--", "save KEK fail")
                 return
             }
 
@@ -42,9 +42,9 @@ class EmvUtil {
                 AidlConstants.Security.KEY_ALG_TYPE_3DES,
                 11
             )
-            Log.e("ddd--", "save TMK result:$result")
+            Log.e("dd--", "save TMK result:$result")
             if (result != 0) {
-                Log.e("ddd--", "save TMK fail")
+                Log.e("dd--", "save TMK fail")
                 return
             }
 
@@ -57,9 +57,9 @@ class EmvUtil {
                 AidlConstants.Security.KEY_ALG_TYPE_3DES,
                 12
             )
-            Log.e("ddd--", "save PIK result:$result")
+            Log.e("dd--", "save PIK result:$result")
             if (result != 0) {
-                Log.e("ddd--", "save PIK fail")
+                Log.e("dd--", "save PIK fail")
                 return
             }
 
@@ -72,9 +72,9 @@ class EmvUtil {
                 AidlConstants.Security.KEY_ALG_TYPE_3DES,
                 13
             )
-            Log.e("ddd--", "save MAK result:$result")
+            Log.e("dd--", "save MAK result:$result")
             if (result != 0) {
-                Log.e("ddd--", "save MAK fail")
+                Log.e("dd--", "save MAK fail")
                 return
             }
 
@@ -87,15 +87,15 @@ class EmvUtil {
                 AidlConstants.Security.KEY_ALG_TYPE_3DES,
                 14
             )
-            Log.e("ddd--", "save TDK result:$result")
+            Log.e("dd--", "save TDK result:$result")
             if (result != 0) {
-                Log.e("ddd--", "save TDK fail")
+                Log.e("dd--", "save TDK fail")
                 return
             }
-            Log.e("ddd--", "init key success")
+            Log.e("dd--", "init key success")
         } catch (e: Exception) {
             e.printStackTrace()
-            Log.e("ddd--", "init key fail")
+            Log.e("dd--", "init key fail")
         }
     }
 
@@ -152,7 +152,7 @@ class EmvUtil {
             mEMVOptV2.addCapk(capkV2)
         } catch (e: Exception) {
             e.printStackTrace()
-            Log.e("ddd--", "initAIDAndRid fail")
+            Log.e("dd--", "initAIDAndRid fail")
         }
     }
 
@@ -246,7 +246,7 @@ class EmvUtil {
         return aidV2
     }
 
-    fun hexStr2Rid(hexStr: String): CapkV2 {
+    private fun hexStr2Rid(hexStr: String): CapkV2 {
         val capkV2 = CapkV2()
         val map = TLVUtil.hexStrToTLVMap(hexStr)
         var tlv = map["9F06"]
@@ -292,10 +292,10 @@ class EmvUtil {
             emvTermParam.capability = "E0F8C8"
             emvTermParam.countryCode = "0156"
             val result = mEMVOptV2.setTerminalParam(emvTermParam)
-            Log.e("ddd--", "setTerminalParam result:$result")
+            Log.e("dd--", "setTerminalParam result:$result")
         } catch (e: Exception) {
             e.printStackTrace()
-            Log.e("ddd--",  "setTerminalParam fail")
+            Log.e("dd--",  "setTerminalParam fail")
         }
     }
 

@@ -4,7 +4,7 @@ import android.os.Bundle
 import android.os.RemoteException
 import com.sunmi.pay.hardware.aidlv2.readcard.CheckCardCallbackV2
 
-open class CheckCardCallbackWrapper : CheckCardCallbackV2.Stub() {
+open class CheckCardCallback : CheckCardCallbackV2.Stub() {
     @Throws(RemoteException::class)
     override fun findMagCard(info: Bundle) {
     }
