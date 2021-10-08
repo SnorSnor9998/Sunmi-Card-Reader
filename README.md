@@ -247,7 +247,7 @@ override fun onAppFinalSelect(p0: String?) {
 
 ```
 
-So here we are checking which type are them but in this case i just going for Visa and Master Card, but if you want other prefix or refer to [this](https://en.wikipedia.org/wiki/EMV#Application_selection)
+So here we are checking which type are them but in this case i just going for Visa and Master Card, but if you want other prefix please refer to [this](https://en.wikipedia.org/wiki/EMV#Application_selection)
 
 ```bash
 val isUnionPay = p0.startsWith("A000000333")
