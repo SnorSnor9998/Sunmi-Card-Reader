@@ -50,7 +50,8 @@ class MainActivity : AppCompatActivity() {
 
         EmvUtil().initKey()
         EmvUtil().initAidAndRid()
-        EmvUtil().setTerminalParam()
+        //Refer ISO 4217
+        EmvUtil().setTerminalParam("0458")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -167,7 +168,7 @@ class MainActivity : AppCompatActivity() {
         Log.e("dd--", "transactProcess")
         try {
             val emvTransData = EMVTransDataV2()
-            emvTransData.amount = "10"
+            emvTransData.amount = "10" //in cent (9F02)
             emvTransData.flowType = 1
             emvTransData.cardType = mCardType
             mEMVOptV2.transactProcess(emvTransData, mEMVCallback)
@@ -197,12 +198,7 @@ class MainActivity : AppCompatActivity() {
             super.onAppFinalSelect(p0)
 
             Log.e("dd--", "onAppFinalSelect value:$p0")
-
-            // set normal tlv data
-            val tags = arrayOf("5F2A", "5F36")
-            val value = arrayOf("0643", "00")
-            mEMVOptV2.setTlvList(AidlConstants.EMV.TLVOpCode.OP_NORMAL, tags,value)
-
+            initEmvTlvData()
 
             if (p0 != null && p0.isNotEmpty()){
                 val isVisa = p0.startsWith("A000000003")
@@ -284,6 +280,17 @@ class MainActivity : AppCompatActivity() {
         
     }
 
+    private fun initEmvTlvData(){
+        // set normal tlv data
+        // Refer ISO 4217
+        // 5F2A (Country Code)
+        // 5F36 (Currency Code Exponent)
+        val tags = arrayOf("5F2A", "5F36")
+        val value = arrayOf("0458", "00")
+        mEMVOptV2.setTlvList(AidlConstants.EMV.TLVOpCode.OP_NORMAL, tags,value)
+    }
+
+
     private fun initPidPad(){
         Log.e("dd--", "initPinPad")
         try {
@@ -337,16 +344,6 @@ class MainActivity : AppCompatActivity() {
     private fun importPinInputStatus(inputResult: Int) {
         Log.e("dd--", "importPinInputStatus:$inputResult")
         try {
-            val tags = arrayOf("5F2A", "5F36")
-            val out = ByteArray(1024)
-            val len = mEMVOptV2.getTlvList(TLVOpCode.OP_NORMAL, tags, out)
-            if (len < 0) {
-                Log.e("dd--", "getTlvList error,len:$len")
-            } else {
-                val hex = ByteUtil.bytes2HexStr(Arrays.copyOf(out, len))
-                val map: Map<String, TLV> = TLVUtil.hexStrToTLVMap(hex)
-                Log.e("dd--", "getTlvList :$map")
-            }
             mEMVOptV2.importPinInputStatus(mPinType!!, inputResult)
         } catch (e: Exception) {
             e.printStackTrace()
@@ -358,9 +355,10 @@ class MainActivity : AppCompatActivity() {
             val tagList = arrayOf(
                 "DF02", "5F34", "9F06", "FF30", "FF31", "95", "9B", "9F36", "9F26",
                 "9F27", "DF31", "5A", "57", "5F24", "9F1A", "9F03", "9F33", "9F10", "9F37", "9C",
-                "9A", "9F02", "5F2A", "82", "9F34", "9F35", "9F1E", "84", "4F", "9F09", "9F41",
+                "9A", "9F02", "5F2A", "5F36", "82", "9F34", "9F35", "9F1E", "84", "4F", "9F09", "9F41",
                 "9F63", "5F20", "9F12", "50"
             )
+            //Only Mastercard have this extra tag
             val payPassTags = arrayOf(
                 "DF811E",
                 "DF812C",
