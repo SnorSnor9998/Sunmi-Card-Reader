@@ -424,16 +424,6 @@ After user done input the pin if successful it will generate the pin block and s
 private fun importPinInputStatus(inputResult: Int) {
     Log.e("dd--", "importPinInputStatus:$inputResult")
     try {
-        val tags = arrayOf("5F2A", "5F36")
-        val out = ByteArray(1024)
-        val len = mEMVOptV2.getTlvList(TLVOpCode.OP_NORMAL, tags, out)
-        if (len < 0) {
-            Log.e("dd--", "getTlvList error,len:$len")
-        } else {
-            val hex = ByteUtil.bytes2HexStr(Arrays.copyOf(out, len))
-            val map: Map<String, TLV> = TLVUtil.hexStrToTLVMap(hex)
-            Log.e("dd--", "getTlvList :$map")
-        }
         mEMVOptV2.importPinInputStatus(mPinType!!, inputResult)
     } catch (e: Exception) {
         e.printStackTrace()
