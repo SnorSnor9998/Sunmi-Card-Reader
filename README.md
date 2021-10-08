@@ -50,13 +50,15 @@ Make sure you've enabled all of the permissions on the `Manifest`
     })
 ```
 
-Before we start scaning the card we have to init for the EMV process (Just copy from the repo), dont ask me why i legit dont know i only know we need it. (Judge if im wrong)
+Before we start scaning the card we have to init for the EMV process (Just copy from the repo), dont ask me why i legit dont know i only know we need it. (Judge me if im wrong)
 
 ```bash
     EmvUtil().initKey()
     EmvUtil().initAidAndRid()
-    EmvUtil().setTerminalParam()
+    EmvUtil().setTerminalParam(countryCode = "0458")
 ```
+
+But one thing need to pay attention is `setTerminalParam`, the parameter it's mean country code base on [ISO-4217](https://en.wikipedia.org/wiki/ISO_4217)
 
 </br>
 
@@ -144,7 +146,7 @@ private fun transactProcess() {
 
 ```
 
-Only 2 value u might need to change like `amount` and `cardType` (either NFC/IC)</br>
+Only 2 value u might need to change like `amount` (cent) and `cardType` (either NFC/IC)</br>
 And same thing as card reading the result will be return on `mEMVCallback`
 
 ```bash
@@ -206,16 +208,29 @@ override fun onAppFinalSelect(p0: String?) {
     super.onAppFinalSelect(p0)
     Log.e("dd--", "onAppFinalSelect value:$p0")
 
-    // set normal tlv data
-    val tags = arrayOf("5F2A", "5F36")
-    val value = arrayOf("0643", "00")
-    mEMVOptV2.setTlvList(AidlConstants.EMV.TLVOpCode.OP_NORMAL, tags,value)
-
+    initEmvTlvData()
 }
 
 ```
 
-Before we start let's set a normal TLV `tag` and `value`, and now we are starting to check the card type (Visa / Master).
+Before we start let's set the normal TLV Data before we start checking the card prefix, the function show below
+
+```bash
+private fun initEmvTlvData(){
+    val tags = arrayOf("5F2A", "5F36")
+    val value = arrayOf("0458", "00")
+    mEMVOptV2.setTlvList(AidlConstants.EMV.TLVOpCode.OP_NORMAL, tags,value)
+}
+```
+
+## ⚠⚠ Important Note ⚠⚠ </br>
+
+`5F2A` = country code </br>
+`5F36` = currency code exponent </br>
+Please refer this [ISO-4217](https://en.wikipedia.org/wiki/ISO_4217) </br></br>
+
+(Side Note: I legit don't know what should i assign for `5F36` even the official document didn't state is `00` or  `02` mean 2 decimal point.)</br></br>
+
 
 ```bash
 override fun onAppFinalSelect(p0: String?) {
@@ -232,11 +247,9 @@ override fun onAppFinalSelect(p0: String?) {
 
 ```
 
-So here we are checking which type are them but in this case i just going for Visa and Master Card, but if you want other here is the prefix i found
+So here we are checking which type are them but in this case i just going for Visa and Master Card, but if you want other prefix or refer to [this](https://en.wikipedia.org/wiki/EMV#Application_selection)
 
 ```bash
-val isVisa = p0.startsWith("A000000003")
-val isMaster = (p0.startsWith("A000000004") || p0.startsWith("A000000005"))
 val isUnionPay = p0.startsWith("A000000333")
 val isAmericanExpress = p0.startsWith("A000000025")
 val isJCB = p0.startsWith("A000000065")
@@ -282,7 +295,19 @@ if (isVisa){
 }                
 ```
 
-Side Note for `AmericanExpress`
+### 📒Side Note
+
+`DF8124` -> Reader Contactless Transaction Limit (No On-device CVM) </br>
+`DF8125` -> Reader Contactless Transaction Limit (On-device CVM) </br>
+`DF8126` -> Reader CVM Required Limit </br>
+
+But i have no idea are we really need to set this value for VISA since VISA doesn't have this tag.</br>
+[VISA](https://iso8583.info/lib/EMV/C3/TLVs)</br>
+[MASTER](https://iso8583.info/lib/EMV/C2/TLVs)
+
+</br>
+
+For `AmericanExpress`
 
 ```bash
 val tags = arrayOf("9F6D", "9F6E", "9F33", "9F35", "DF8168", "DF8167", "DF8169", "DF8170")
@@ -459,6 +484,7 @@ private fun getTlvData() {
             "9F35", "9F1E", "84", "4F", "9F09", "9F41",
             "9F63", "5F20", "9F12", "50"
         )
+        //Only Mastercard have this extra tag
         val payPassTags = arrayOf(
                 "DF811E",
                 "DF812C",
@@ -544,6 +570,17 @@ override fun onTransResult(p0: Int, p1: String?) {
 
 ## Reference
 
+### Repo
+
 - [SunmiPayDemoV2new](https://github.com/yy471101598/SunmiPayDemoV2new)
 - [SunmiPaySdkTestDemo](https://github.com/sanxy/SunmiPaySdkTestDemo/tree/master/app/src/main/java/com/sm/sdk/demo)
 - [SunmiPay](https://gitee.com/AndroidSpaces/SunmiPay)
+
+### Doc
+
+- [ISO 4217](https://en.wikipedia.org/wiki/ISO_4217)
+- [ISO 3166-1](https://en.wikipedia.org/wiki/ISO_3166-1_numeric)
+- [ISO 8583](https://iso8583.info/)
+- [EMV](https://en.wikipedia.org/wiki/EMV)
+- [ISO 9564](https://en.wikipedia.org/wiki/ISO_9564)
+- [Eftlab](https://www.eftlab.com.au/knowledge-base/)
