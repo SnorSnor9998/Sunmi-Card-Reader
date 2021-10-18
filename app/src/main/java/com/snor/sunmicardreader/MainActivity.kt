@@ -40,6 +40,7 @@ class MainActivity : AppCompatActivity() {
     private val cardType = MutableLiveData<String>()
     private val result = MutableLiveData<String>()
 
+    private val amount = "100"
     private var mCardNo: String = ""
     private var mCardType = 0
     private var mPinType: Int? = null
@@ -48,10 +49,7 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
 
-        EmvUtil().initKey()
-        EmvUtil().initAidAndRid()
-        //Refer ISO 4217
-        EmvUtil().setTerminalParam("0458")
+        EmvUtil().init()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -168,8 +166,8 @@ class MainActivity : AppCompatActivity() {
         Log.e("dd--", "transactProcess")
         try {
             val emvTransData = EMVTransDataV2()
-            emvTransData.amount = "10" //in cent (9F02)
-            emvTransData.flowType = 1
+            emvTransData.amount = amount //in cent (9F02)
+            emvTransData.flowType = 1 //1 Standard Flow, 2 Simple Flow, 3 QPass
             emvTransData.cardType = mCardType
             mEMVOptV2.transactProcess(emvTransData, mEMVCallback)
         } catch (e: Exception) {
@@ -198,7 +196,12 @@ class MainActivity : AppCompatActivity() {
             super.onAppFinalSelect(p0)
 
             Log.e("dd--", "onAppFinalSelect value:$p0")
-            initEmvTlvData()
+
+
+            val tags = arrayOf("5F2A", "5F36", "9F33", "9F66")
+            val value = arrayOf("0458", "00", "E0F8C8", "B6C0C080")
+            mEMVOptV2.setTlvList(TLVOpCode.OP_NORMAL, tags, value)
+
 
             if (p0 != null && p0.isNotEmpty()){
                 val isVisa = p0.startsWith("A000000003")
@@ -208,35 +211,27 @@ class MainActivity : AppCompatActivity() {
                 if (isVisa){
                     // VISA(PayWave)
                     Log.e("dd--", "detect VISA card")
-                    val tagsPayWave = arrayOf("DF8124", "DF8125", "DF8126")
-                    val valuesPayWave = arrayOf(
-                        "999999999999", "999999999999", "000000000000")
-                    mEMVOptV2.setTlvList(
-                        AidlConstants.EMV.TLVOpCode.OP_PAYWAVE,
-                        tagsPayWave,
-                        valuesPayWave
-                    )
                 }else if(isMaster){
+
                     // MasterCard(PayPass)
                     Log.e("dd--", "detect MasterCard card")
                     // set PayPass tlv data
                     val tagsPayPass = arrayOf(
-                        "DF8117", "DF8118", "DF8119", "DF811F", "DF811E", "DF812C",
-                        "DF8123", "DF8124", "DF8125", "DF8126",
-                        "DF811B", "DF811D", "DF8122", "DF8120", "DF8121"
+                        "DF8117", "DF8118", "DF8119", "DF811B", "DF811D",
+                        "DF811E", "DF811F", "DF8120", "DF8121", "DF8122",
+                        "DF8123", "DF8124", "DF8125", "DF812C"
                     )
                     val valuesPayPass = arrayOf(
-                        "E0", "F8", "F8", "E8", "00", "00",
-                        "000000000000", "000000100000", "999999999999", "000000100000",
-                        "30", "02", "0000000000", "000000000000", "000000000000"
+                        "E0", "F8", "F8", "30", "02",
+                        "00", "E8", "F45084800C", "0000000000", "F45084800C",
+                        "000000000000", "999999999999", "999999999999", "00"
                     )
-                    mEMVOptV2.setTlvList(
-                        AidlConstants.EMV.TLVOpCode.OP_PAYPASS,
-                        tagsPayPass,
-                        valuesPayPass
-                    )
-                }
+                    mEMVOptV2.setTlvList(TLVOpCode.OP_PAYPASS, tagsPayPass, valuesPayPass)
 
+                    //Reader CVM Required Limit (Malaysia => RM250)
+                    mEMVOptV2.setTlv(TLVOpCode.OP_PAYPASS,"DF8126","000000025000")
+
+                }
 
             }
             mEMVOptV2.importAppFinalSelectStatus(0)
@@ -278,16 +273,6 @@ class MainActivity : AppCompatActivity() {
             Log.e("dd--", "onTransResult code:$p0 desc:$p1")
         }
         
-    }
-
-    private fun initEmvTlvData(){
-        // set normal tlv data
-        // Refer ISO 4217
-        // 5F2A (Country Code)
-        // 5F36 (Currency Code Exponent)
-        val tags = arrayOf("5F2A", "5F36")
-        val value = arrayOf("0458", "00")
-        mEMVOptV2.setTlvList(AidlConstants.EMV.TLVOpCode.OP_NORMAL, tags,value)
     }
 
 
