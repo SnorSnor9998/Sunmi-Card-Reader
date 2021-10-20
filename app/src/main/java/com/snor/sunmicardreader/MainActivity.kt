@@ -25,6 +25,7 @@ import com.sunmi.pay.hardware.aidlv2.emv.EMVOptV2
 import com.sunmi.pay.hardware.aidlv2.pinpad.PinPadOptV2
 import com.sunmi.pay.hardware.aidlv2.readcard.CheckCardCallbackV2
 import com.sunmi.pay.hardware.aidlv2.readcard.ReadCardOptV2
+import java.nio.charset.StandardCharsets
 import java.util.*
 
 
@@ -40,7 +41,7 @@ class MainActivity : AppCompatActivity() {
     private val cardType = MutableLiveData<String>()
     private val result = MutableLiveData<String>()
 
-    private val amount = "100"
+    private val amount = "300"
     private var mCardNo: String = ""
     private var mCardType = 0
     private var mPinType: Int? = null
@@ -261,10 +262,11 @@ class MainActivity : AppCompatActivity() {
 
         override fun onOnlineProc() {
             super.onOnlineProc()
-
+            Log.e("dd--", "onOnlineProc")
             if(mCardType != AidlConstants.CardType.MAGNETIC.value){
                 getTlvData()
             }
+
         }
 
         override fun onTransResult(p0: Int, p1: String?) {
@@ -284,12 +286,12 @@ class MainActivity : AppCompatActivity() {
             pinPadConfig.pinType = mPinType!!
             pinPadConfig.isOrderNumKey = true
             val panBytes = mCardNo.substring(mCardNo.length - 13, mCardNo.length - 1)
-                .toByteArray(charset("US-ASCII"))
+                .toByteArray(StandardCharsets.US_ASCII)
             pinPadConfig.pan = panBytes
             pinPadConfig.timeout = 60 * 1000 // input password timeout
             pinPadConfig.pinKeyIndex = 12 // pik index (0-19)
-            pinPadConfig.maxInput = 6
-            pinPadConfig.minInput = 0
+            pinPadConfig.maxInput = 12
+            pinPadConfig.minInput = 4
             pinPadConfig.keySystem = 0 // 0 - MkSk 1 - DuKpt
             pinPadConfig.algorithmType = 0 // 0 - 3DES 1 - SM4
             mPinPadOptV2.initPinPad(pinPadConfig, mPinPadCallback)
@@ -368,12 +370,12 @@ class MainActivity : AppCompatActivity() {
             val map: MutableMap<String, TLV> = HashMap()
             var len = mEMVOptV2.getTlvList(TLVOpCode.OP_NORMAL, tagList, outData)
             if (len > 0) {
-                val hexStr = ByteUtil.bytes2HexStr(Arrays.copyOf(outData, len))
+                val hexStr = ByteUtil.bytes2HexStr(outData.copyOf(len))
                 map.putAll(TLVUtil.hexStrToTLVMap(hexStr))
             }
             len = mEMVOptV2.getTlvList(TLVOpCode.OP_PAYPASS, payPassTags, outData)
             if (len > 0) {
-                val hexStr = ByteUtil.bytes2HexStr(Arrays.copyOf(outData, len))
+                val hexStr = ByteUtil.bytes2HexStr(outData.copyOf(len))
                 map.putAll(TLVUtil.hexStrToTLVMap(hexStr))
             }
 
