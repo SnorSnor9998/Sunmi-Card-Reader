@@ -216,7 +216,6 @@ class MainActivity : AppCompatActivity() {
 
                     // MasterCard(PayPass)
                     Log.e("dd--", "detect MasterCard card")
-                    // set PayPass tlv data
                     val tagsPayPass = arrayOf(
                         "DF8117", "DF8118", "DF8119", "DF811B", "DF811D",
                         "DF811E", "DF811F", "DF8120", "DF8121", "DF8122",

@@ -288,7 +288,7 @@ class EmvUtil {
         try {
             val mEMVOptV2: EMVOptV2 = BaseApp.mEMVOptV2!!
             val emvTermParam = EmvTermParamV2()
-            emvTermParam.countryCode = "0458"
+            emvTermParam.countryCode = "0458" //ISO-4217
             emvTermParam.capability = "E0F8C8"
             val result = mEMVOptV2.setTerminalParam(emvTermParam)
             Log.e("dd--", "setTerminalParam result:$result")
