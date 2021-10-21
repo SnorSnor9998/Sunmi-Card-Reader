@@ -50,15 +50,13 @@ Make sure you've enabled all of the permissions on the `Manifest`
     })
 ```
 
-Before we start scaning the card we have to init for the EMV process (Just copy from the repo), dont ask me why i legit dont know i only know we need it. (Judge me if im wrong)
+Before we start scaning the card we have to init for the EMV process (Just copy from the repo), it's for init for AID(Application Identifiers), CAPK (CA Public Key) and terminal config
 
 ```bash
-    EmvUtil().initKey()
-    EmvUtil().initAidAndRid()
-    EmvUtil().setTerminalParam(countryCode = "0458")
+    EmvUtil().init()
 ```
 
-But one thing need to pay attention is `setTerminalParam`, the parameter it's mean country code base on [ISO-4217](https://en.wikipedia.org/wiki/ISO_4217)
+Note: Every country have different format, Im not really sure either.
 
 </br>
 
@@ -136,7 +134,7 @@ private fun transactProcess() {
     try {
         val emvTransData = EMVTransDataV2()
         emvTransData.amount = "10"
-        emvTransData.flowType = 1
+        emvTransData.flowType = 1 //1 Standard Flow, 2 Simple Flow, 3 QPass
         emvTransData.cardType = mCardType
         mEMVOptV2.transactProcess(emvTransData, mEMVCallback)
     } catch (e: Exception) {
@@ -203,31 +201,25 @@ mEMVOptV2.importAppSelect(0)
 
 ### 🕑Step 2
 
+Set the normal TLV Data before we start checking the card prefix
+
 ```bash
 override fun onAppFinalSelect(p0: String?) {
     super.onAppFinalSelect(p0)
     Log.e("dd--", "onAppFinalSelect value:$p0")
 
-    initEmvTlvData()
+    val tags = arrayOf("5F2A", "5F36", "9F33", "9F66")
+    val value = arrayOf("0458", "00", "E0F8C8", "B6C0C080")
+    mEMVOptV2.setTlvList(TLVOpCode.OP_NORMAL, tags, value)
 }
 
-```
-
-Before we start let's set the normal TLV Data before we start checking the card prefix, the function show below
-
-```bash
-private fun initEmvTlvData(){
-    val tags = arrayOf("5F2A", "5F36")
-    val value = arrayOf("0458", "00")
-    mEMVOptV2.setTlvList(AidlConstants.EMV.TLVOpCode.OP_NORMAL, tags,value)
-}
 ```
 
 ## ⚠⚠ Important Note ⚠⚠ </br>
 
 `5F2A` = country code </br>
 `5F36` = currency code exponent </br>
-Please refer this [ISO-4217](https://en.wikipedia.org/wiki/ISO_4217) </br></br>
+Please refer this [EFTLAB](https://www.eftlab.com/knowledge-base/145-emv-nfc-tags/) </br></br>
 
 (Side Note: I legit don't know what should i assign for `5F36` even the official document didn't state is `00` or  `02` mean 2 decimal point.)</br></br>
 
@@ -256,7 +248,7 @@ val isJCB = p0.startsWith("A000000065")
 val isRuPay = p0.startsWith("A000000524")
 ```
 
-Still inside `onAppFinalSelect` after checking with the prefix and now we have to set the TLV `tag` and `value` according to the card type.
+Still inside `onAppFinalSelect` after checking with the prefix and now we have to set the other TLV value.
 
 
 ```bash
@@ -265,45 +257,33 @@ if (isVisa){
     // VISA(PayWave)
     Log.e("dd--", "detect VISA card")
 
-    val tags = arrayOf("DF8124", "DF8125", "DF8126")
-    val values = arrayOf(
-        "999999999999", "999999999999", "000000000000")
-
-    mEMVOptV2.setTlvList(
-        AidlConstants.EMV.TLVOpCode.OP_PAYWAVE,tags,values
-    )
-
 }else if(isMaster){
 
     // MasterCard(PayPass)
     Log.e("dd--", "detect MasterCard card")
-    // set PayPass tlv data
-    val tags = arrayOf(
-        "DF8117", "DF8118", "DF8119", "DF811F", "DF811E", "DF812C",
-        "DF8123", "DF8124", "DF8125", "DF8126",
-        "DF811B", "DF811D", "DF8122", "DF8120", "DF8121"
+    val tagsPayPass = arrayOf(
+        "DF8117", "DF8118", "DF8119", "DF811B", "DF811D",
+        "DF811E", "DF811F", "DF8120", "DF8121", "DF8122",
+        "DF8123", "DF8124", "DF8125", "DF812C"
     )
-    val values = arrayOf(
-        "E0", "F8", "F8", "E8", "00", "00",
-        "000000000000", "000000100000", "999999999999", "000000100000",
-        "30", "02", "0000000000", "000000000000", "000000000000"
+    val valuesPayPass = arrayOf(
+        "E0", "F8", "F8", "30", "02",
+        "00", "E8", "F45084800C", "0000000000", "F45084800C",
+        "000000000000", "999999999999", "999999999999", "00"
     )
-     mEMVOptV2.setTlvList(
-        AidlConstants.EMV.TLVOpCode.OP_PAYPASS,tags,values
-    )
+                    
+    mEMVOptV2.setTlvList(TLVOpCode.OP_PAYPASS, tagsPayPass, valuesPayPass)
+
+    //Reader CVM Required Limit (Malaysia => RM250)
+    mEMVOptV2.setTlv(TLVOpCode.OP_PAYPASS,"DF8126","000000025000")
 
 }                
 ```
 
 ### 📒Side Note
 
-`DF8124` -> Reader Contactless Transaction Limit (No On-device CVM) </br>
-`DF8125` -> Reader Contactless Transaction Limit (On-device CVM) </br>
 `DF8126` -> Reader CVM Required Limit </br>
 
-But i have no idea are we really need to set this value for VISA since VISA doesn't have this tag.</br>
-[VISA](https://iso8583.info/lib/EMV/C3/TLVs)</br>
-[MASTER](https://iso8583.info/lib/EMV/C2/TLVs)
 
 </br>
 
@@ -383,7 +363,7 @@ private fun initPidPad(){
 `algorithmType` 0 = 3DES , 1 = SM4 </br>
 `keySystem` 0 = SEC_MkSk , 1 = SEC_DuKpt </br>
 </br>
-If your pin block return you `00` try to change `pinKeyIndex` until where is works. Range from 0 to 19, i legit don't know what this thing do if anyone count help me explain.
+If your pin block return you `00` try to change `pinKeyIndex` until where is works. I legit don't know what this thing do if anyone count help me explain.
 </br>
 
 </br>
@@ -455,9 +435,17 @@ On this step, we almost there and here we gonna pull all the data (TLV data) ins
 ```bash
 override fun onOnlineProc() {
     super.onOnlineProc()
+    Log.e("dd--", "onOnlineProc")
+    try{
 
-    if(mCardType != AidlConstants.CardType.MAGNETIC.value){
-        getTlvData()
+        if(mCardType != AidlConstants.CardType.MAGNETIC.value){
+            getTlvData()
+        }
+        importOnlineProcessStatus(0)
+
+    }catch (e:Exception){
+        e.printStackTrace()
+        importOnlineProcessStatus(-1)
     }
 }
 ```
@@ -519,11 +507,9 @@ private fun getTlvData() {
             }
         }
         Log.e("dd--", "TLV: $temp")
-        importOnlineProcessStatus(0)
 
     } catch (e: Exception) {
         e.printStackTrace()
-        importOnlineProcessStatus(-1)
     }
 }
 ```
