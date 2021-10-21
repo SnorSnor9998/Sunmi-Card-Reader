@@ -41,7 +41,7 @@ class MainActivity : AppCompatActivity() {
     private val cardType = MutableLiveData<String>()
     private val result = MutableLiveData<String>()
 
-    private val amount = "300"
+    private val amount = "40000"
     private var mCardNo: String = ""
     private var mCardType = 0
     private var mPinType: Int? = null
@@ -257,14 +257,22 @@ class MainActivity : AppCompatActivity() {
             super.onCertVerify(p0, p1)
             Log.e("dd--", "onCertVerify certType:$p0 certInfo:$p1")
             mCertInfo = p1.toString()
-            mEMVOptV2.importCertStatus(0)
+            mEMVOptV2.importCertStatus(p0)
         }
 
         override fun onOnlineProc() {
             super.onOnlineProc()
             Log.e("dd--", "onOnlineProc")
-            if(mCardType != AidlConstants.CardType.MAGNETIC.value){
-                getTlvData()
+            try{
+
+                if(mCardType != AidlConstants.CardType.MAGNETIC.value){
+                    getTlvData()
+                }
+                importOnlineProcessStatus(0)
+
+            }catch (e:Exception){
+                e.printStackTrace()
+                importOnlineProcessStatus(-1)
             }
 
         }
@@ -393,11 +401,9 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             Log.e("dd--", "TLV: $temp")
-            importOnlineProcessStatus(0)
 
         } catch (e: Exception) {
             e.printStackTrace()
-            importOnlineProcessStatus(-1)
         }
     }
 

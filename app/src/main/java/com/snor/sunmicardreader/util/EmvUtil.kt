@@ -18,95 +18,97 @@ class EmvUtil {
         setTerminalParam()
     }
 
-//    fun initKey() {
-//        try {
-//            val mSecurityOptV2: SecurityOptV2 = BaseApp.mSecurityOptV2!!
-//            val cvByte: ByteArray = ByteUtil.hexStr2Bytes("82E13665B4624DF5")
-//            // save KEK
-//            var dataByte: ByteArray = ByteUtil.hexStr2Bytes("11111111111111111111111111111111")
-//            var result = mSecurityOptV2.savePlaintextKey(
-//                AidlConstants.Security.KEY_TYPE_TMK,
-//                dataByte,
-//                cvByte,
-//                AidlConstants.Security.KEY_ALG_TYPE_3DES,
-//                10
-//            )
-//            Log.e("dd--", "save KEK result:$result")
-//            if (result != 0) {
-//                Log.e("dd--", "save KEK fail")
-//                return
-//            }
-//
-//            // save TMK
-//            dataByte = ByteUtil.hexStr2Bytes("F40379AB9E0EC533F40379AB9E0EC533")
-//            result = mSecurityOptV2.saveCiphertextKey(
-//                AidlConstants.Security.KEY_TYPE_TMK,
-//                dataByte,
-//                cvByte,
-//                10,
-//                AidlConstants.Security.KEY_ALG_TYPE_3DES,
-//                11
-//            )
-//            Log.e("dd--", "save TMK result:$result")
-//            if (result != 0) {
-//                Log.e("dd--", "save TMK fail")
-//                return
-//            }
-//
-//            // save PIK
-//            result = mSecurityOptV2.saveCiphertextKey(
-//                AidlConstants.Security.KEY_TYPE_PIK,
-//                dataByte,
-//                cvByte,
-//                11,
-//                AidlConstants.Security.KEY_ALG_TYPE_3DES,
-//                12
-//            )
-//            Log.e("dd--", "save PIK result:$result")
-//            if (result != 0) {
-//                Log.e("dd--", "save PIK fail")
-//                return
-//            }
-//
-//            // save MAK
-//            result = mSecurityOptV2.saveCiphertextKey(
-//                AidlConstants.Security.KEY_TYPE_MAK,
-//                dataByte,
-//                cvByte,
-//                11,
-//                AidlConstants.Security.KEY_ALG_TYPE_3DES,
-//                13
-//            )
-//            Log.e("dd--", "save MAK result:$result")
-//            if (result != 0) {
-//                Log.e("dd--", "save MAK fail")
-//                return
-//            }
-//
-//            // save TDK
-//            result = mSecurityOptV2.saveCiphertextKey(
-//                AidlConstants.Security.KEY_TYPE_TDK,
-//                dataByte,
-//                cvByte,
-//                11,
-//                AidlConstants.Security.KEY_ALG_TYPE_3DES,
-//                14
-//            )
-//            Log.e("dd--", "save TDK result:$result")
-//            if (result != 0) {
-//                Log.e("dd--", "save TDK fail")
-//                return
-//            }
-//            Log.e("dd--", "init key success")
-//        } catch (e: Exception) {
-//            e.printStackTrace()
-//            Log.e("dd--", "init key fail")
-//        }
-//    }
+    fun initKey() {
+        try {
+            val mSecurityOptV2: SecurityOptV2 = BaseApp.mSecurityOptV2!!
+            val cvByte: ByteArray = ByteUtil.hexStr2Bytes("82E13665B4624DF5")
+            // save KEK
+            var dataByte: ByteArray = ByteUtil.hexStr2Bytes("11111111111111111111111111111111")
+            var result = mSecurityOptV2.savePlaintextKey(
+                AidlConstants.Security.KEY_TYPE_TMK,
+                dataByte,
+                cvByte,
+                AidlConstants.Security.KEY_ALG_TYPE_3DES,
+                10
+            )
+            Log.e("dd--", "save KEK result:$result")
+            if (result != 0) {
+                Log.e("dd--", "save KEK fail")
+                return
+            }
+
+            // save TMK
+            dataByte = ByteUtil.hexStr2Bytes("F40379AB9E0EC533F40379AB9E0EC533")
+            result = mSecurityOptV2.saveCiphertextKey(
+                AidlConstants.Security.KEY_TYPE_TMK,
+                dataByte,
+                cvByte,
+                10,
+                AidlConstants.Security.KEY_ALG_TYPE_3DES,
+                11
+            )
+            Log.e("dd--", "save TMK result:$result")
+            if (result != 0) {
+                Log.e("dd--", "save TMK fail")
+                return
+            }
+
+            // save PIK
+            result = mSecurityOptV2.saveCiphertextKey(
+                AidlConstants.Security.KEY_TYPE_PIK,
+                dataByte,
+                cvByte,
+                11,
+                AidlConstants.Security.KEY_ALG_TYPE_3DES,
+                12
+            )
+            Log.e("dd--", "save PIK result:$result")
+            if (result != 0) {
+                Log.e("dd--", "save PIK fail")
+                return
+            }
+
+            // save MAK
+            result = mSecurityOptV2.saveCiphertextKey(
+                AidlConstants.Security.KEY_TYPE_MAK,
+                dataByte,
+                cvByte,
+                11,
+                AidlConstants.Security.KEY_ALG_TYPE_3DES,
+                13
+            )
+            Log.e("dd--", "save MAK result:$result")
+            if (result != 0) {
+                Log.e("dd--", "save MAK fail")
+                return
+            }
+
+            // save TDK
+            result = mSecurityOptV2.saveCiphertextKey(
+                AidlConstants.Security.KEY_TYPE_TDK,
+                dataByte,
+                cvByte,
+                11,
+                AidlConstants.Security.KEY_ALG_TYPE_3DES,
+                14
+            )
+            Log.e("dd--", "save TDK result:$result")
+            if (result != 0) {
+                Log.e("dd--", "save TDK fail")
+                return
+            }
+            Log.e("dd--", "init key success")
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Log.e("dd--", "init key fail")
+        }
+    }
 
     fun initAidAndRid() {
         try {
             val mEMVOptV2: EMVOptV2 = BaseApp.mEMVOptV2!!
+            mEMVOptV2.deleteAid(null)
+            mEMVOptV2.deleteCapk(null,null)
 
             //AID (Application Identifiers)
             mEMVOptV2.addAid(hexStr2Aid("9F0608A000000333010101DF0101009F08020020DF1105D84000A800DF1205D84004F800DF130500100000009F1B040000C350DF150400000000DF160199DF170199DF14039F3704DF1801019F7B06100000000000DF1906100000000000DF2006100000000000DF2106100000000000"))
