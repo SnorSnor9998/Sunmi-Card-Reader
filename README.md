@@ -1,5 +1,8 @@
 # Sunmi-Card-Reader
 
+# ⚠️ Update (20-Oct-2022)
+Is been awhile since last update, there still a lot of learning waiting for me, will update some doc regrading what i learn once i free, but if you want immediate answer feel free to contact me.
+
 ## 📝 Side note
 
 I discovered that there are several names for this, such as Sunmi Card Reader, Sunmi Pay Library, Sumni Pay Service, Sunmi SDK. I don't care what you call it, all i want to do is demonstrate and show how to use the sdk, as their website is basically a trash and donesn't include much information even on the internet.
